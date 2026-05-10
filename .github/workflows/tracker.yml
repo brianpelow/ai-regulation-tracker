@@ -1,0 +1,30 @@
+name: AI Regulation Tracker
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  discussions: write
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+      - name: Run tracker agent
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          uv sync
+          uv run python scripts/agent.py
+      - name: Commit archive
+        run: |
+          git config user.name "regulation-tracker[bot]"
+          git config user.email "agent@brianpelow.github.io"
+          git add archive/
+          git diff --staged --quiet || git commit -m "chore(agent): regulation digest $(date -u +%Y-%m-%d)"
+          git push
